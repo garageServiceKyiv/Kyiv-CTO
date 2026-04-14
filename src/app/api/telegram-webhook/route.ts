@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { uploadToCloudinary, getPortfolioImages, deleteFromCloudinary } from "@/lib/cloudinary";
 import { CATEGORIES } from "@/lib/portfolio";
+import { handlePricingCallback, handlePricingText, getPricingUserState, clearPricingUserState } from "@/lib/telegram-pricing";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
@@ -88,6 +89,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  if (message.text === "💰 Ціни") {
+    clearPricingUserState(message.from?.id ?? 0);
+    await handlePricingCallback("pricing", message.chat.id, message.from?.id ?? 0, telegramRequest);
+    return NextResponse.json({ ok: true });
+  }
+
+  // Handle pricing text input (multi-step flows)
+  if (message.text && message.from?.id) {
+    const state = getPricingUserState(message.from.id);
+    if (state) {
+      const handled = await handlePricingText(message.text, message.chat.id, message.from.id, telegramRequest);
+      if (handled) return NextResponse.json({ ok: true });
+    }
+  }
+
   if (message.text === "🗑 Видалити фото") {
     const buttons = Object.entries(CATEGORY_LABELS).map(([slug, label]) => ([
       { text: label, callback_data: `delcat:${slug}` },
@@ -116,6 +132,7 @@ async function sendMainMenu(chatId: number) {
     reply_markup: {
       keyboard: [
         [{ text: "📸 Завантажити фото" }, { text: "🗑 Видалити фото" }],
+        [{ text: "💰 Ціни" }],
       ],
       resize_keyboard: true,
       is_persistent: true,
@@ -129,6 +146,12 @@ async function handleCallback(callback: TelegramCallbackQuery) {
 
   // Acknowledge button press
   await telegramRequest("answerCallbackQuery", { callback_query_id: callback.id });
+
+  // Pricing callbacks
+  if (callback.data === "pricing" || callback.data?.startsWith("p:")) {
+    await handlePricingCallback(callback.data, chatId, callback.from.id, telegramRequest);
+    return;
+  }
 
   if (callback.data === "upload") {
     const buttons = Object.entries(CATEGORY_LABELS).map(([slug, label]) => ([
