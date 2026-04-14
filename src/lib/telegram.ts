@@ -17,6 +17,7 @@ export async function sendToTelegram(data: ContactFormData): Promise<boolean> {
 
   const lines = [
     "🔔 Нова заявка з сайту",
+    `🕐 ${new Date().toLocaleString("uk-UA", { timeZone: "Europe/Kyiv" })}`,
     "",
     `👤 Ім'я: ${data.name}`,
     `📞 Телефон: ${data.phone}`,
@@ -24,7 +25,6 @@ export async function sendToTelegram(data: ContactFormData): Promise<boolean> {
     data.service ? `🔧 Послуга: ${data.service}` : null,
     data.message ? `\n💬 Повідомлення:\n${data.message}` : null,
     "",
-    `🕐 ${new Date().toLocaleString("uk-UA", { timeZone: "Europe/Kyiv" })}`,
   ];
 
   const text = lines.filter(Boolean).join("\n");
