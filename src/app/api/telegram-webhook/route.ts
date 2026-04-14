@@ -44,7 +44,7 @@ interface TelegramMessage {
 interface TelegramCallbackQuery {
   id: string;
   from: { id: number; first_name: string };
-  message?: { chat: { id: number } };
+  message?: { message_id: number; chat: { id: number } };
   data?: string;
 }
 
@@ -118,13 +118,20 @@ async function handleCallback(callback: TelegramCallbackQuery) {
   if (callback.data === "clear") {
     const ids = chatMessages.get(chatId) ?? [];
 
+    // Also include the callback button message itself
+    const callbackMsgId = callback.message?.message_id;
+    if (callbackMsgId && !ids.includes(callbackMsgId)) {
+      ids.push(callbackMsgId);
+    }
+
     // Delete all tracked messages
-    for (const msgId of ids) {
-      await telegramRequest("deleteMessage", {
+    const deletePromises = ids.map((msgId) =>
+      telegramRequest("deleteMessage", {
         chat_id: chatId,
         message_id: msgId,
-      });
-    }
+      })
+    );
+    await Promise.all(deletePromises);
 
     chatMessages.set(chatId, []);
 
@@ -315,21 +322,27 @@ async function handlePhoto(message: TelegramMessage) {
   }
 }
 
-async function telegramRequest(method: string, body: Record<string, unknown>) {
-  const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+async function telegramRequest(method: string, body: Record<string, unknown>): Promise<Record<string, unknown> | null> {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
 
-  // Track bot messages for cleanup
-  const chatId = body.chat_id as number | undefined;
-  if (chatId && (method === "sendMessage" || method === "sendPhoto")) {
-    try {
-      const data = await res.json();
-      if (data.ok && data.result?.message_id) {
-        trackMessage(chatId, data.result.message_id);
+    const data = await res.json();
+
+    // Track bot messages for cleanup
+    const chatId = body.chat_id as number | undefined;
+    if (chatId && (method === "sendMessage" || method === "sendPhoto")) {
+      const result = data.result as Record<string, unknown> | undefined;
+      if (data.ok && result?.message_id) {
+        trackMessage(chatId, result.message_id as number);
       }
-    } catch { /* ignore */ }
+    }
+
+    return data as Record<string, unknown>;
+  } catch {
+    return null;
   }
 }
