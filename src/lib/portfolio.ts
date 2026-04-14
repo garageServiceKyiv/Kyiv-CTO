@@ -15,6 +15,7 @@ export const CATEGORIES: Record<string, string> = {
   "електрика": "electrical",
   "гальма": "brakes",
   "то": "maintenance",
+  "авто": "cars",
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -24,6 +25,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   electrical: "Електрика",
   brakes: "Гальма",
   maintenance: "ТО",
+  cars: "Авто",
 };
 
 export function getCategoryLabel(slug: string): string {

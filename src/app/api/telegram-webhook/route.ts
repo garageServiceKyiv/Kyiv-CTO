@@ -15,6 +15,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   electrical: "Електрика",
   brakes: "Гальма",
   maintenance: "ТО",
+  cars: "Авто",
 };
 
 interface TelegramPhoto {
