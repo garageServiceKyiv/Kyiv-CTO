@@ -5,6 +5,18 @@ import { CATEGORIES } from "@/lib/portfolio";
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET;
 
+// Store selected category per user (in-memory, resets on deploy)
+const userCategory = new Map<number, string>();
+
+const CATEGORY_LABELS: Record<string, string> = {
+  engine: "Двигун",
+  suspension: "Ходова",
+  diagnostics: "Діагностика",
+  electrical: "Електрика",
+  brakes: "Гальма",
+  maintenance: "ТО",
+};
+
 interface TelegramPhoto {
   file_id: string;
   file_unique_id: string;
@@ -17,17 +29,25 @@ interface TelegramMessage {
   message_id: number;
   from?: { id: number; first_name: string };
   chat: { id: number; type: string };
+  text?: string;
   photo?: TelegramPhoto[];
   caption?: string;
+}
+
+interface TelegramCallbackQuery {
+  id: string;
+  from: { id: number; first_name: string };
+  message?: { chat: { id: number } };
+  data?: string;
 }
 
 interface TelegramUpdate {
   update_id: number;
   message?: TelegramMessage;
+  callback_query?: TelegramCallbackQuery;
 }
 
 export async function POST(request: NextRequest) {
-  // Verify webhook secret
   if (WEBHOOK_SECRET) {
     const secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token");
     if (secret !== WEBHOOK_SECRET) {
@@ -35,36 +55,117 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const update: TelegramUpdate = await request.json();
-  const message = update.message;
+  if (!BOT_TOKEN) return NextResponse.json({ ok: true });
 
-  if (!message?.photo || !BOT_TOKEN) {
+  const update: TelegramUpdate = await request.json();
+
+  // Handle callback from category buttons
+  if (update.callback_query) {
+    await handleCallback(update.callback_query);
     return NextResponse.json({ ok: true });
   }
 
-  // Get the largest photo
-  const photo = message.photo[message.photo.length - 1];
+  const message = update.message;
+  if (!message) return NextResponse.json({ ok: true });
+
+  // Handle /start command
+  if (message.text === "/start") {
+    await sendMainMenu(message.chat.id);
+    return NextResponse.json({ ok: true });
+  }
+
+  // Handle photo upload
+  if (message.photo) {
+    await handlePhoto(message);
+    return NextResponse.json({ ok: true });
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
+async function sendMainMenu(chatId: number) {
+  await telegramRequest("sendMessage", {
+    chat_id: chatId,
+    text: "👋 Вітаю! Я бот Auto Service Garage.\n\nНатисніть кнопку нижче, щоб завантажити фото до портфоліо.",
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "📸 Завантажити фото", callback_data: "upload" }],
+      ],
+    },
+  });
+}
+
+async function handleCallback(callback: TelegramCallbackQuery) {
+  const chatId = callback.message?.chat.id;
+  if (!chatId) return;
+
+  // Acknowledge button press
+  await telegramRequest("answerCallbackQuery", { callback_query_id: callback.id });
+
+  if (callback.data === "upload") {
+    // Show category selection
+    const buttons = Object.entries(CATEGORY_LABELS).map(([slug, label]) => ([
+      { text: label, callback_data: `cat:${slug}` },
+    ]));
+
+    await telegramRequest("sendMessage", {
+      chat_id: chatId,
+      text: "📁 Оберіть категорію:",
+      reply_markup: { inline_keyboard: buttons },
+    });
+    return;
+  }
+
+  if (callback.data?.startsWith("cat:")) {
+    const category = callback.data.replace("cat:", "");
+    const label = CATEGORY_LABELS[category];
+    userCategory.set(callback.from.id, category);
+
+    await telegramRequest("sendMessage", {
+      chat_id: chatId,
+      text: `✅ Категорія: **${label}**\n\n📸 Тепер надішліть фото.\nМожете додати підпис до фото (необов'язково).`,
+      parse_mode: "Markdown",
+    });
+    return;
+  }
+}
+
+async function handlePhoto(message: TelegramMessage) {
+  const chatId = message.chat.id;
+  const userId = message.from?.id;
+  const photo = message.photo![message.photo!.length - 1];
   const caption = message.caption ?? "";
 
-  // Parse category from hashtag in caption
+  // Check for hashtag in caption (legacy method)
   const hashtagMatch = caption.match(/#(\S+)/);
   const hashtag = hashtagMatch?.[1]?.toLowerCase() ?? "";
-  const category = CATEGORIES[hashtag];
+  let category = CATEGORIES[hashtag];
+  let cleanCaption = caption;
 
-  if (!category) {
-    const available = Object.keys(CATEGORIES).map((k) => `#${k}`).join(", ");
-    await sendTelegramMessage(
-      message.chat.id,
-      `❌ Вкажіть категорію хештегом у підписі до фото.\n\nДоступні: ${available}`
-    );
-    return NextResponse.json({ ok: true });
+  // If no hashtag, check saved category from button selection
+  if (!category && userId) {
+    category = userCategory.get(userId) ?? "";
   }
 
-  // Remove hashtag from caption for display
-  const cleanCaption = caption.replace(/#\S+/g, "").trim();
+  if (hashtag) {
+    cleanCaption = caption.replace(/#\S+/g, "").trim();
+  }
+
+  if (!category) {
+    // No category — show selection
+    const buttons = Object.entries(CATEGORY_LABELS).map(([slug, label]) => ([
+      { text: label, callback_data: `cat:${slug}` },
+    ]));
+
+    await telegramRequest("sendMessage", {
+      chat_id: chatId,
+      text: "❌ Спочатку оберіть категорію, потім надішліть фото.",
+      reply_markup: { inline_keyboard: buttons },
+    });
+    return;
+  }
 
   try {
-    // Get file URL from Telegram
     const fileRes = await fetch(
       `https://api.telegram.org/bot${BOT_TOKEN}/getFile?file_id=${photo.file_id}`
     );
@@ -72,31 +173,40 @@ export async function POST(request: NextRequest) {
     const filePath = fileData.result?.file_path;
 
     if (!filePath) {
-      await sendTelegramMessage(message.chat.id, "❌ Не вдалося отримати файл.");
-      return NextResponse.json({ ok: true });
+      await telegramRequest("sendMessage", {
+        chat_id: chatId,
+        text: "❌ Не вдалося отримати файл.",
+      });
+      return;
     }
 
     const fileUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/${filePath}`;
-
-    // Upload to Cloudinary
     const url = await uploadToCloudinary(fileUrl, category, cleanCaption);
+    const label = CATEGORY_LABELS[category] ?? category;
 
-    await sendTelegramMessage(
-      message.chat.id,
-      `✅ Фото додано до портфоліо!\n\n📁 Категорія: ${hashtag}\n📝 Підпис: ${cleanCaption || "—"}\n🔗 ${url}`
-    );
+    await telegramRequest("sendMessage", {
+      chat_id: chatId,
+      text: `✅ Фото додано!\n\n📁 Категорія: ${label}\n📝 Підпис: ${cleanCaption || "—"}\n🔗 ${url}`,
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "📸 Завантажити ще", callback_data: `cat:${category}` }],
+          [{ text: "📁 Змінити категорію", callback_data: "upload" }],
+        ],
+      },
+    });
   } catch (error) {
     console.error("[Webhook] Upload error:", error);
-    await sendTelegramMessage(message.chat.id, "❌ Помилка при завантаженні фото.");
+    await telegramRequest("sendMessage", {
+      chat_id: chatId,
+      text: "❌ Помилка при завантаженні фото.",
+    });
   }
-
-  return NextResponse.json({ ok: true });
 }
 
-async function sendTelegramMessage(chatId: number, text: string) {
-  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+async function telegramRequest(method: string, body: Record<string, unknown>) {
+  await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text }),
+    body: JSON.stringify(body),
   });
 }
