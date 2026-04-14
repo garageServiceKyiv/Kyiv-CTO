@@ -147,7 +147,6 @@ export default function ContactFormSection() {
           className="bg-surface-container border border-outline-variant/20 p-10 max-w-md w-full text-center"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="text-5xl mb-4">✅</div>
           <h3 className="font-headline text-2xl font-black uppercase tracking-tight text-primary-container mb-3">
             Заявку відправлено!
           </h3>
