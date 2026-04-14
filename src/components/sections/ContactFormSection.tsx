@@ -40,6 +40,7 @@ export default function ContactFormSection() {
       if (res.ok) {
         setStatus("success");
         form.reset();
+        alert("Заявку відправлено! Ми зателефонуємо вам найближчим часом.");
       } else {
         const body = await res.json();
         setErrorMsg(body.error || "Помилка відправки");
