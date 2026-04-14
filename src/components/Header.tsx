@@ -17,7 +17,8 @@ export default function Header() {
 
   return (
     <nav className="fixed top-0 w-full z-50 glass-nav border-b border-outline-variant/20 flex justify-between items-center px-6 lg:px-10 py-3 lg:py-4">
-      <Link href="/" className="flex items-center gap-3">
+      <Link href="/" className="flex items-center gap-2">
+        <img src="/logo.png" alt="Logo" className="h-10 lg:h-12 w-auto invert" />
         <span className="text-xl lg:text-2xl font-black text-primary-container tracking-tight font-headline">
           AUTO SERVICE GARAGE
         </span>
