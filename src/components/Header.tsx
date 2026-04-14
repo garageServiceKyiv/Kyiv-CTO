@@ -45,7 +45,7 @@ export default function Header() {
           073 222 69 68
         </span>
         <Link
-          href="/contacts"
+          href="/contacts#form"
           className="bg-primary-container text-on-primary font-headline font-bold uppercase tracking-tighter text-sm px-5 lg:px-6 py-2 hover:bg-primary-dim transition-colors active:scale-95"
         >
           Запис

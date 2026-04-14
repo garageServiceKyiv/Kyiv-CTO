@@ -58,7 +58,7 @@ export default function ContactFormSection() {
 
   return (
     <>
-    <div className="bg-surface-container p-8 lg:p-10 relative overflow-hidden">
+    <div id="form" className="bg-surface-container p-8 lg:p-10 relative overflow-hidden scroll-mt-24">
       <div className="relative z-10">
         <h2 className="font-headline text-3xl font-black uppercase mb-2">
           Запит на діагностику
