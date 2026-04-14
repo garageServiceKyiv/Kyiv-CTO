@@ -126,7 +126,7 @@ export default function ReviewsPage() {
                 Instagram
               </a>
               <Link
-                href="/contacts"
+                href="/contacts#form"
                 className="border border-white/20 text-white font-headline font-bold uppercase tracking-tighter px-6 py-3 hover:bg-white/5 transition-colors"
               >
                 Залишити заявку

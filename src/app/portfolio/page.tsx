@@ -59,7 +59,7 @@ export default async function PortfolioPage() {
             </p>
           </div>
           <Link
-            href="/contacts"
+            href="/contacts#form"
             className="bg-background text-white font-headline font-bold uppercase tracking-tighter px-8 py-4 hover:bg-surface-container-high transition-colors whitespace-nowrap"
           >
             Записатися на сервіс

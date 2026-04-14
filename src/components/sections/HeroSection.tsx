@@ -31,7 +31,7 @@ export default function HeroSection() {
           </p>
           <div className="flex flex-wrap gap-6 items-center">
             <Link
-              href="/contacts"
+              href="/contacts#form"
               className="bg-primary-container text-on-primary font-headline text-base lg:text-lg font-black uppercase px-8 lg:px-10 py-4 tracking-widest shadow-[0_0_20px_rgba(253,228,3,0.3)] hover:scale-105 transition-transform duration-200"
             >
               Записатися на сервіс

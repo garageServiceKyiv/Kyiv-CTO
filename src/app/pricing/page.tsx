@@ -76,7 +76,7 @@ export default async function PricingPage() {
             Залиште заявку онлайн або зателефонуйте нам. Точна вартість визначається після діагностики.
           </p>
           <Link
-            href="/contacts"
+            href="/contacts#form"
             className="inline-block bg-background text-white font-headline font-bold uppercase tracking-tighter px-10 py-4 hover:bg-surface-container-high transition-colors"
           >
             Записатися на сервіс

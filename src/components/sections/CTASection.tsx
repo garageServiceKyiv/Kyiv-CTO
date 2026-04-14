@@ -19,7 +19,7 @@ export default function CTASection() {
           Запишіться на професійну діагностику та обслуговування вже сьогодні.
         </p>
         <Link
-          href="/contacts"
+          href="/contacts#form"
           className="inline-block bg-primary-container text-on-primary font-headline font-black uppercase text-lg px-12 py-4 tracking-widest hover:scale-105 transition-transform shadow-[0_0_30px_rgba(253,228,3,0.3)]"
         >
           Записатися на сервіс
