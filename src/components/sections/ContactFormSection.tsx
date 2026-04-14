@@ -15,6 +15,7 @@ const SERVICES = [
 export default function ContactFormSection() {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
+  const [showModal, setShowModal] = useState(false);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -40,7 +41,7 @@ export default function ContactFormSection() {
       if (res.ok) {
         setStatus("success");
         form.reset();
-        alert("Заявку відправлено! Ми зателефонуємо вам найближчим часом.");
+        setShowModal(true);
       } else {
         const body = await res.json();
         setErrorMsg(body.error || "Помилка відправки");
@@ -56,6 +57,7 @@ export default function ContactFormSection() {
     "w-full bg-surface-container-low border border-outline-variant/30 px-4 py-3 text-white placeholder-white/30 focus:border-secondary focus:outline-none font-body text-sm";
 
   return (
+    <>
     <div className="bg-surface-container p-8 lg:p-10 relative overflow-hidden">
       <div className="relative z-10">
         <h2 className="font-headline text-3xl font-black uppercase mb-2">
@@ -134,5 +136,33 @@ export default function ContactFormSection() {
         </form>
       </div>
     </div>
+
+    {/* Success Modal */}
+    {showModal && (
+      <div
+        className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center px-6"
+        onClick={() => setShowModal(false)}
+      >
+        <div
+          className="bg-surface-container border border-outline-variant/20 p-10 max-w-md w-full text-center"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="text-5xl mb-4">✅</div>
+          <h3 className="font-headline text-2xl font-black uppercase tracking-tight text-primary-container mb-3">
+            Заявку відправлено!
+          </h3>
+          <p className="text-on-surface-variant text-sm mb-8">
+            Ми зателефонуємо вам найближчим часом.
+          </p>
+          <button
+            onClick={() => setShowModal(false)}
+            className="bg-primary-container text-on-primary font-headline font-bold uppercase tracking-widest text-sm px-10 py-3 hover:bg-primary-dim transition-colors"
+          >
+            Добре
+          </button>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
