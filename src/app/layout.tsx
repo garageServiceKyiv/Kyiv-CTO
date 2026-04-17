@@ -5,8 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import StructuredData from "@/components/StructuredData";
 import { SITE_CONFIG, PAGE_SEO } from "@/config/seo";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import Script from "next/script";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-headline",
@@ -59,8 +58,11 @@ export default function RootLayout({
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
-        <Analytics />
-        <SpeedInsights />
+        <Script
+          defer
+          src="https://static.cloudflareinsights.com/beacon.min.js"
+          data-cf-beacon='{"token": "9d6d9f533a97472aa98b8d76f98b41f8"}'
+        />
       </body>
     </html>
   );
